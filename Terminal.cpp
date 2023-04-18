@@ -937,7 +937,7 @@ namespace Terminal {
 			return -1;
 		}
 
-		if (m_pScreen->SetCursorColor(ColorPair)) {
+		if (!m_pScreen->SetCursorColor(ColorPair)) {
 			HeapFree(hHeap, NULL, pBuffer);
 			return -1;
 		}
@@ -1447,7 +1447,7 @@ namespace Terminal {
 		}
 
 		switch (pMessage->GetAction()) {
-			case ACTION_READA: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_READA: {
 				if (m_pScreen->ReadA(reinterpret_cast<char*>(pMessage->GetData()), TERMINAL_BUFFER_SIZE)) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1457,7 +1457,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_READW: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_READW: {
 				if (m_pScreen->ReadW(reinterpret_cast<wchar_t*>(pMessage->GetData()), TERMINAL_BUFFER_SIZE)) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1467,7 +1467,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_WRITEA: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_WRITEA: {
 				if (m_pScreen->WriteA(reinterpret_cast<char*>(pMessage->GetData()))) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1477,7 +1477,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_WRITEW: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_WRITEW: {
 				if (m_pScreen->WriteW(reinterpret_cast<wchar_t*>(pMessage->GetData()))) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1487,7 +1487,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_GETBUFFERINFO: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_GETBUFFERINFO: {
 				if (m_pScreen->GetBufferInfo(reinterpret_cast<PCONSOLE_SCREEN_BUFFER_INFOEX>(pMessage->GetData()))) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1497,7 +1497,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_SETBUFFERINFO: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_SETBUFFERINFO: {
 				if (m_pScreen->SetBufferInfo(*reinterpret_cast<PCONSOLE_SCREEN_BUFFER_INFOEX>(pMessage->GetData()))) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1507,7 +1507,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_SETATTRIBUTES: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_SETATTRIBUTES: {
 				if (m_pScreen->SetAttributes(*reinterpret_cast<PWORD>(pMessage->GetData()))) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1517,7 +1517,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_FLUSH: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_FLUSH: {
 				struct _FLUSH {
 					bool m_bClearAll;
 					bool m_bUpdateOriginalColorPair;
@@ -1534,7 +1534,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_SETCOLOR: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_SETCOLOR: {
 				if (m_pScreen->SetColor(*reinterpret_cast<PCOLOR_PAIR>(pMessage->GetData()))) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1544,7 +1544,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_RESTORECOLOR: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_RESTORECOLOR: {
 				if (m_pScreen->RestoreColor(*reinterpret_cast<bool*>(pMessage->GetData()))) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1554,7 +1554,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_SETCURSORCOLOR: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORCOLOR: {
 				if (m_pScreen->SetCursorColor(*reinterpret_cast<PCOLOR_PAIR>(pMessage->GetData()))) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1564,7 +1564,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_RESTORECURSORCOLOR: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_RESTORECURSORCOLOR: {
 				if (m_pScreen->RestoreCursorColor(*reinterpret_cast<bool*>(pMessage->GetData()))) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1574,7 +1574,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_GETCURSORINFO: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_GETCURSORINFO: {
 				if (m_pScreen->GetCursorInfo(reinterpret_cast<PCONSOLE_CURSOR_INFO>(pMessage->GetData()))) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1584,7 +1584,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_SETCURSORINFO: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORINFO: {
 				if (m_pScreen->SetCursorInfo(*reinterpret_cast<PCONSOLE_CURSOR_INFO>(pMessage->GetData()))) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1594,7 +1594,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_SETCURSORPOSITION: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORPOSITION: {
 				if (m_pScreen->SetCursorPosition(*reinterpret_cast<PCOORD>(pMessage->GetData()))) {
 					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 					if (Send(pMessage)) {
@@ -1604,7 +1604,7 @@ namespace Terminal {
 				break;
 			}
 
-			case ACTION_ERASE: {
+			case TERMINAL_MESSAGE_ACTION::ACTION_ERASE: {
 				struct _ERASE {
 					COORD m_CursorPosition;
 					unsigned int m_unLength;
@@ -1621,9 +1621,11 @@ namespace Terminal {
 			}
 
 			default: {
-				return false;
+				break;
 			}
 		}
+
+		return false;
 	}
 
 	Screen* const Server::GetScreen() {

@@ -257,7 +257,7 @@ namespace Terminal {
 	// Terminal Message
 	// ----------------------------------------------------------------
 
-	typedef enum _TERMINAL_MESSAGE_ACTION : unsigned int {
+	typedef enum class _TERMINAL_MESSAGE_ACTION : unsigned int {
 		// PIPE
 		ACTION_NONE = 0,
 		ACTION_OPEN,
