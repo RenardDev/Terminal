@@ -39,16 +39,17 @@ int _tmain(int nArguments, PTCHAR* pArguments) {
 					Console.tprintf(COLOR::COLOR_GREEN, _T("CONNECTED!\n"));
 
 					auto MessagePtr = std::make_unique<Terminal::TerminalMessage>();
-					auto pMessage = MessagePtr.get();
 
-					while (true) {
-						memset(pMessage, 0, sizeof(Terminal::TerminalMessage));
+					while (MessagePtr->GetAction() != Terminal::TERMINAL_MESSAGE_ACTION::ACTION_CLOSE) {
+						memset(MessagePtr.get(), 0, sizeof(Terminal::TerminalMessage));
 
-						if (!Server.Receive(pMessage)) {
+						if (!Server.Receive(MessagePtr)) {
+							Console.tprintf(COLOR::COLOR_RED, _T("RECEIVE ERROR!\n"));
 							break;
 						}
 
-						if (!Server.Process(pMessage)) {
+						if (!Server.Process(MessagePtr)) {
+							Console.tprintf(COLOR::COLOR_RED, _T("PROCESS ERROR!\n"));
 							break;
 						}
 					}
@@ -75,11 +76,14 @@ int _tmain(int nArguments, PTCHAR* pArguments) {
 
 					Console.tprintf(COLOR::COLOR_GREEN, _T("CONNECTED!\n"));
 
-					Client.tprintf({ COLOR::COLOR_CYAN, COLOR::COLOR_BLUE }, _T("Hello, World!\n"));
+					Client.tprintf({ COLOR::COLOR_CYAN, COLOR::COLOR_BLUE }, _T("Hello, World!"));
+					Client.tprintf(COLOR::COLOR_AUTO, _T("\n"));
 
-					int a = 0;
-					Client.tscanf(COLOR::COLOR_YELLOW, _T("%i"), &a);
-					Console.tprintf(COLOR::COLOR_GREEN, _T("a = %i\n"), a);
+					int nA = 0;
+					Client.tscanf(COLOR::COLOR_YELLOW, _T("%i"), &nA);
+					Console.tprintf(COLOR::COLOR_GREEN, _T("nA = %i\n"), nA);
+
+					Client.Pause();
 
 					if (Client.Close()) {
 						return -1;

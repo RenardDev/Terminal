@@ -7,6 +7,9 @@
 #include <Windows.h>
 #include <tchar.h>
 
+// STL
+#include <memory>
+
 // ----------------------------------------------------------------
 // General definitions
 // ----------------------------------------------------------------
@@ -277,6 +280,8 @@ namespace Terminal {
 		ACTION_READW,
 		ACTION_WRITEA,
 		ACTION_WRITEW,
+		ACTION_PAUSEA,
+		ACTION_PAUSEW,
 		ACTION_GETBUFFERINFO,
 		ACTION_SETBUFFERINFO,
 		ACTION_SETATTRIBUTES,
@@ -323,9 +328,9 @@ namespace Terminal {
 	public:
 		bool Open();
 		bool Close();
-		bool Send(TerminalMessage* const pMessage);
-		bool Receive(TerminalMessage* const pMessage);
-		bool Process(TerminalMessage* const pMessage);
+		bool Send(const std::unique_ptr<TerminalMessage>& ptrMessage);
+		bool Receive(const std::unique_ptr<TerminalMessage>& ptrMessage);
+		bool Process(const std::unique_ptr<TerminalMessage>& ptrMessage);
 
 	public:
 		Screen* const GetScreen();
@@ -352,8 +357,8 @@ namespace Terminal {
 	public:
 		bool Open(TCHAR szSessionName[64]);
 		bool Close();
-		bool Send(TerminalMessage* const pMessage);
-		bool Receive(TerminalMessage* const pMessage);
+		bool Send(const std::unique_ptr<TerminalMessage>& ptrMessage);
+		bool Receive(const std::unique_ptr<TerminalMessage>& ptrMessage);
 
 	public:
 		bool ReadA(char* const szBuffer, const unsigned int unLength);
@@ -369,6 +374,15 @@ namespace Terminal {
 		bool Write(wchar_t const* const szBuffer);
 #else
 		bool Write(char const* const szBuffer);
+#endif
+
+	public:
+		bool PauseA(char const* szPromt = nullptr);
+		bool PauseW(wchar_t const* szPromt = nullptr);
+#ifdef UNICODE
+		bool Pause(wchar_t const* szPromt = nullptr);
+#else
+		bool Pause(char const* szPromt = nullptr);
 #endif
 
 	public:

@@ -9,9 +9,6 @@
 #include <clocale>
 #include <cstdio>
 
-// STL
-#include <memory>
-
 // ----------------------------------------------------------------
 // Terminal
 // ----------------------------------------------------------------
@@ -1345,11 +1342,11 @@ namespace Terminal {
 	}
 
 	void TerminalMessage::ReadData(void* pBuffer, unsigned int unSize) {
-		memcpy_s(pBuffer, unSize, m_pData, sizeof(m_pData));
+		memcpy(pBuffer, m_pData, unSize);
 	}
 
 	void TerminalMessage::WriteData(void* pBuffer, unsigned int unSize) {
-		memcpy_s(m_pData, sizeof(m_pData), pBuffer, unSize);
+		memcpy(m_pData, pBuffer, unSize);
 	}
 
 	// ----------------------------------------------------------------
@@ -1386,23 +1383,22 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_OPEN);
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_OPEN);
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			Close();
 			return false;
 		}
@@ -1416,13 +1412,12 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_CLOSE);
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_CLOSE);
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			return false;
 		}
 
@@ -1442,8 +1437,8 @@ namespace Terminal {
 		return true;
 	}
 
-	bool Server::Send(TerminalMessage* const pMessage) {
-		if (!pMessage) {
+	bool Server::Send(const std::unique_ptr<TerminalMessage>& ptrMessage) {
+		if (!ptrMessage) {
 			return false;
 		}
 
@@ -1452,7 +1447,7 @@ namespace Terminal {
 		}
 
 		DWORD unNumberOfBytesWritten = 0;
-		if (!WriteFile(m_hPipe, pMessage, sizeof(TerminalMessage), &unNumberOfBytesWritten, nullptr)) {
+		if (WriteFile(m_hPipe, ptrMessage.get(), sizeof(TerminalMessage), &unNumberOfBytesWritten, nullptr) == FALSE) {
 			return false;
 		}
 
@@ -1463,8 +1458,8 @@ namespace Terminal {
 		return true;
 	}
 
-	bool Server::Receive(TerminalMessage* const pMessage) {
-		if (!pMessage) {
+	bool Server::Receive(const std::unique_ptr<TerminalMessage>& ptrMessage) {
+		if (!ptrMessage) {
 			return false;
 		}
 
@@ -1473,7 +1468,7 @@ namespace Terminal {
 		}
 
 		DWORD unNumberOfBytesRead = 0;
-		if (!ReadFile(m_hPipe, pMessage, sizeof(TerminalMessage), &unNumberOfBytesRead, nullptr)) {
+		if (ReadFile(m_hPipe, ptrMessage.get(), sizeof(TerminalMessage), &unNumberOfBytesRead, nullptr) == FALSE) {
 			return false;
 		}
 
@@ -1484,192 +1479,209 @@ namespace Terminal {
 		return true;
 	}
 
-	bool Server::Process(TerminalMessage* const pMessage) {
+	bool Server::Process(const std::unique_ptr<TerminalMessage>& ptrMessage) {
 		if (!m_pScreen) {
 			return false;
 		}
 
-		if (!pMessage) {
+		if (!ptrMessage) {
 			return false;
 		}
 
-		switch (pMessage->GetAction()) {
-		case TERMINAL_MESSAGE_ACTION::ACTION_READA: {
-			if (m_pScreen->ReadA(reinterpret_cast<char*>(pMessage->GetData()), TERMINAL_BUFFER_SIZE)) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
-					return true;
+		switch (ptrMessage->GetAction()) {
+			case TERMINAL_MESSAGE_ACTION::ACTION_CLOSE: {
+				if (!CloseHandle(m_hPipe)) {
+					return false;
 				}
-			}
-			break;
-		}
 
-		case TERMINAL_MESSAGE_ACTION::ACTION_READW: {
-			if (m_pScreen->ReadW(reinterpret_cast<wchar_t*>(pMessage->GetData()), TERMINAL_BUFFER_SIZE)) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
-					return true;
-				}
-			}
-			break;
-		}
+				m_hPipe = nullptr;
 
-		case TERMINAL_MESSAGE_ACTION::ACTION_WRITEA: {
-			if (m_pScreen->WriteA(reinterpret_cast<char*>(pMessage->GetData()))) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
-					return true;
-				}
-			}
-			break;
-		}
+				memset(m_szSessionName, 0, sizeof(m_szSessionName));
 
-		case TERMINAL_MESSAGE_ACTION::ACTION_WRITEW: {
-			if (m_pScreen->WriteW(reinterpret_cast<wchar_t*>(pMessage->GetData()))) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
-					return true;
-				}
-			}
-			break;
-		}
+				const DWORD unPID = GetCurrentProcessId();
+				const DWORD unTID = GetCurrentThreadId();
+				const DWORD64 unCycle = __rdtsc();
+				_stprintf_s(m_szSessionName, _T("GLOBAL:%08X:%08X:%08X%08X"), 0xFFFFFFFF - unPID, 0xFFFFFFFF - unTID, static_cast<DWORD>(unCycle & 0xFFFFFFFF), static_cast<DWORD>((unCycle >> 32) & 0xFFFFFFFF));
 
-		case TERMINAL_MESSAGE_ACTION::ACTION_GETBUFFERINFO: {
-			if (m_pScreen->GetBufferInfo(reinterpret_cast<PCONSOLE_SCREEN_BUFFER_INFOEX>(pMessage->GetData()))) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
-					return true;
-				}
-			}
-			break;
-		}
-
-		case TERMINAL_MESSAGE_ACTION::ACTION_SETBUFFERINFO: {
-			if (m_pScreen->SetBufferInfo(*reinterpret_cast<PCONSOLE_SCREEN_BUFFER_INFOEX>(pMessage->GetData()))) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
-					return true;
-				}
-			}
-			break;
-		}
-
-		case TERMINAL_MESSAGE_ACTION::ACTION_SETATTRIBUTES: {
-			if (m_pScreen->SetAttributes(*reinterpret_cast<PWORD>(pMessage->GetData()))) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
-					return true;
-				}
-			}
-			break;
-		}
-
-		case TERMINAL_MESSAGE_ACTION::ACTION_FLUSH: {
-			struct _FLUSH {
-				bool m_bClearAll;
-				bool m_bUpdateOriginalColorPair;
-				bool m_bResetPreviousColorPair;
-			} Data = *reinterpret_cast<_FLUSH*>(pMessage->GetData());
-
-			if (m_pScreen->Flush(Data.m_bClearAll, Data.m_bUpdateOriginalColorPair, Data.m_bResetPreviousColorPair)) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
-					return true;
-				}
+				return true;
 			}
 
-			break;
-		}
-
-		case TERMINAL_MESSAGE_ACTION::ACTION_SETCOLOR: {
-			if (m_pScreen->SetColor(*reinterpret_cast<PCOLOR_PAIR>(pMessage->GetData()))) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
+			case TERMINAL_MESSAGE_ACTION::ACTION_READA: {
+				ptrMessage->SetAction(m_pScreen->ReadA(reinterpret_cast<char*>(ptrMessage->GetData()), TERMINAL_BUFFER_SIZE) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
 					return true;
 				}
-			}
-			break;
-		}
 
-		case TERMINAL_MESSAGE_ACTION::ACTION_RESTORECOLOR: {
-			if (m_pScreen->RestoreColor(*reinterpret_cast<bool*>(pMessage->GetData()))) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_READW: {
+				ptrMessage->SetAction(m_pScreen->ReadW(reinterpret_cast<wchar_t*>(ptrMessage->GetData()), TERMINAL_BUFFER_SIZE) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
 					return true;
 				}
-			}
-			break;
-		}
 
-		case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORCOLOR: {
-			if (m_pScreen->SetCursorColor(*reinterpret_cast<PCOLOR_PAIR>(pMessage->GetData()))) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_WRITEA: {
+				ptrMessage->SetAction(m_pScreen->WriteA(reinterpret_cast<char*>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
 					return true;
 				}
-			}
-			break;
-		}
 
-		case TERMINAL_MESSAGE_ACTION::ACTION_RESTORECURSORCOLOR: {
-			if (m_pScreen->RestoreCursorColor(*reinterpret_cast<bool*>(pMessage->GetData()))) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_WRITEW: {
+				ptrMessage->SetAction(m_pScreen->WriteW(reinterpret_cast<wchar_t*>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
 					return true;
 				}
-			}
-			break;
-		}
 
-		case TERMINAL_MESSAGE_ACTION::ACTION_GETCURSORINFO: {
-			if (m_pScreen->GetCursorInfo(reinterpret_cast<PCONSOLE_CURSOR_INFO>(pMessage->GetData()))) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_PAUSEA: {
+				ptrMessage->SetAction(m_pScreen->PauseA(reinterpret_cast<char*>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
 					return true;
 				}
-			}
-			break;
-		}
 
-		case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORINFO: {
-			if (m_pScreen->SetCursorInfo(*reinterpret_cast<PCONSOLE_CURSOR_INFO>(pMessage->GetData()))) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_PAUSEW: {
+				ptrMessage->SetAction(m_pScreen->PauseW(reinterpret_cast<wchar_t*>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
 					return true;
 				}
-			}
-			break;
-		}
 
-		case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORPOSITION: {
-			if (m_pScreen->SetCursorPosition(*reinterpret_cast<PCOORD>(pMessage->GetData()))) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_GETBUFFERINFO: {
+				ptrMessage->SetAction(m_pScreen->GetBufferInfo(reinterpret_cast<PCONSOLE_SCREEN_BUFFER_INFOEX>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
 					return true;
 				}
+
+				break;
 			}
-			break;
-		}
 
-		case TERMINAL_MESSAGE_ACTION::ACTION_ERASE: {
-			struct _ERASE {
-				COORD m_CursorPosition;
-				unsigned int m_unLength;
-			} Data = *reinterpret_cast<_ERASE*>(pMessage->GetData());
-
-			if (m_pScreen->Erase(Data.m_CursorPosition, Data.m_unLength)) {
-				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-				if (Send(pMessage)) {
+			case TERMINAL_MESSAGE_ACTION::ACTION_SETBUFFERINFO: {
+				ptrMessage->SetAction(m_pScreen->SetBufferInfo(*reinterpret_cast<PCONSOLE_SCREEN_BUFFER_INFOEX>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
 					return true;
 				}
+
+				break;
 			}
 
-			break;
-		}
+			case TERMINAL_MESSAGE_ACTION::ACTION_SETATTRIBUTES: {
+				ptrMessage->SetAction(m_pScreen->SetAttributes(*reinterpret_cast<PWORD>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
+					return true;
+				}
 
-		default: {
-			break;
-		}
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_FLUSH: {
+				struct _FLUSH {
+					bool m_bClearAll;
+					bool m_bUpdateOriginalColorPair;
+					bool m_bResetPreviousColorPair;
+				} Data = *reinterpret_cast<_FLUSH*>(ptrMessage->GetData());
+
+				ptrMessage->SetAction(m_pScreen->Flush(Data.m_bClearAll, Data.m_bUpdateOriginalColorPair, Data.m_bResetPreviousColorPair) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
+					return true;
+				}
+
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_SETCOLOR: {
+				ptrMessage->SetAction(m_pScreen->SetColor(*reinterpret_cast<PCOLOR_PAIR>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
+					return true;
+				}
+
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_RESTORECOLOR: {
+				ptrMessage->SetAction(m_pScreen->RestoreColor(*reinterpret_cast<bool*>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
+					return true;
+				}
+
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORCOLOR: {
+				ptrMessage->SetAction(m_pScreen->SetCursorColor(*reinterpret_cast<PCOLOR_PAIR>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
+					return true;
+				}
+
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_RESTORECURSORCOLOR: {
+				ptrMessage->SetAction(m_pScreen->RestoreCursorColor(*reinterpret_cast<bool*>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
+					return true;
+				}
+
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_GETCURSORINFO: {
+				ptrMessage->SetAction(m_pScreen->GetCursorInfo(reinterpret_cast<PCONSOLE_CURSOR_INFO>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
+					return true;
+				}
+
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORINFO: {
+				ptrMessage->SetAction(m_pScreen->SetCursorInfo(*reinterpret_cast<PCONSOLE_CURSOR_INFO>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
+					return true;
+				}
+
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORPOSITION: {
+				ptrMessage->SetAction(m_pScreen->SetCursorPosition(*reinterpret_cast<PCOORD>(ptrMessage->GetData())) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
+					return true;
+				}
+
+				break;
+			}
+
+			case TERMINAL_MESSAGE_ACTION::ACTION_ERASE: {
+				struct _ERASE {
+					COORD m_CursorPosition;
+					unsigned int m_unLength;
+				} Data = *reinterpret_cast<_ERASE*>(ptrMessage->GetData());
+
+				ptrMessage->SetAction(m_pScreen->Erase(Data.m_CursorPosition, Data.m_unLength) ? TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS : TERMINAL_MESSAGE_ACTION::ACTION_NONE);
+				if (Send(ptrMessage)) {
+					return true;
+				}
+
+				break;
+			}
+
+			default: {
+				break;
+			}
 		}
 
 		return false;
@@ -1716,23 +1728,22 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_OPEN) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_OPEN) {
 			Close();
 			return false;
 		}
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
@@ -1746,13 +1757,12 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_CLOSE);
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_CLOSE);
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			return false;
 		}
 
@@ -1767,8 +1777,8 @@ namespace Terminal {
 		return true;
 	}
 
-	bool Client::Send(TerminalMessage* const pMessage) {
-		if (!pMessage) {
+	bool Client::Send(const std::unique_ptr<TerminalMessage>& ptrMessage) {
+		if (!ptrMessage) {
 			return false;
 		}
 
@@ -1777,7 +1787,7 @@ namespace Terminal {
 		}
 
 		DWORD unNumberOfBytesWritten = 0;
-		if (!WriteFile(m_hPipe, pMessage, sizeof(TerminalMessage), &unNumberOfBytesWritten, nullptr)) {
+		if (WriteFile(m_hPipe, ptrMessage.get(), sizeof(TerminalMessage), &unNumberOfBytesWritten, nullptr) == FALSE) {
 			return false;
 		}
 
@@ -1788,8 +1798,8 @@ namespace Terminal {
 		return true;
 	}
 
-	bool Client::Receive(TerminalMessage* const pMessage) {
-		if (!pMessage) {
+	bool Client::Receive(const std::unique_ptr<TerminalMessage>& ptrMessage) {
+		if (!ptrMessage) {
 			return false;
 		}
 
@@ -1798,7 +1808,7 @@ namespace Terminal {
 		}
 
 		DWORD unNumberOfBytesRead = 0;
-		if (!ReadFile(m_hPipe, pMessage, sizeof(TerminalMessage), &unNumberOfBytesRead, nullptr)) {
+		if (ReadFile(m_hPipe, ptrMessage.get(), sizeof(TerminalMessage), &unNumberOfBytesRead, nullptr) == FALSE) {
 			return false;
 		}
 
@@ -1819,27 +1829,26 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_READA);
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_READA);
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
-		pMessage->ReadData(szBuffer, min(TERMINAL_MESSAGE_DATA_SIZE, unLength));
+		MessagePtr->ReadData(szBuffer, min(TERMINAL_MESSAGE_DATA_SIZE, unLength));
 
 		return true;
 	}
@@ -1854,27 +1863,26 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_READW);
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_READW);
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
-		pMessage->ReadData(szBuffer, min(TERMINAL_MESSAGE_DATA_SIZE, unLength * sizeof(wchar_t)));
+		MessagePtr->ReadData(szBuffer, min(TERMINAL_MESSAGE_DATA_SIZE, unLength * sizeof(wchar_t)));
 
 		return true;
 	}
@@ -1895,26 +1903,25 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_WRITEA);
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_WRITEA);
 
 		const unsigned int unLength = static_cast<unsigned int>(strnlen_s(szBuffer, TERMINAL_MESSAGE_DATA_SIZE));
-		pMessage->WriteData(const_cast<char*>(szBuffer), unLength);
+		MessagePtr->WriteData(const_cast<char*>(szBuffer), unLength);
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
@@ -1927,26 +1934,25 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_WRITEW);
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_WRITEW);
 
 		const unsigned int unLength = static_cast<unsigned int>(wcsnlen_s(szBuffer, TERMINAL_MESSAGE_DATA_SIZE) * sizeof(wchar_t));
-		pMessage->WriteData(const_cast<wchar_t*>(szBuffer), unLength);
+		MessagePtr->WriteData(const_cast<wchar_t*>(szBuffer), unLength);
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
@@ -1963,53 +1969,123 @@ namespace Terminal {
 	}
 #endif
 
+	bool Client::PauseA(char const* szPromt) {
+		if (!szPromt) {
+			szPromt = "Press any key to continue...";
+		}
+
+		auto MessagePtr = std::make_unique<TerminalMessage>();
+
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
+
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_PAUSEA);
+
+		const unsigned int unLength = static_cast<unsigned int>(strnlen_s(szPromt, TERMINAL_MESSAGE_DATA_SIZE));
+		MessagePtr->WriteData(const_cast<char*>(szPromt), unLength);
+
+		if (!Send(MessagePtr)) {
+			Close();
+			return false;
+		}
+
+		if (!Receive(MessagePtr)) {
+			Close();
+			return false;
+		}
+
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+			return false;
+		}
+
+		return true;
+	}
+
+	bool Client::PauseW(wchar_t const* szPromt) {
+		if (!szPromt) {
+			szPromt = L"Press any key to continue...";
+		}
+
+		auto MessagePtr = std::make_unique<TerminalMessage>();
+
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
+
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_PAUSEW);
+
+		const unsigned int unLength = static_cast<unsigned int>(wcsnlen_s(szPromt, TERMINAL_MESSAGE_DATA_SIZE) * sizeof(wchar_t));
+		MessagePtr->WriteData(const_cast<wchar_t*>(szPromt), unLength);
+
+		if (!Send(MessagePtr)) {
+			Close();
+			return false;
+	}
+
+		if (!Receive(MessagePtr)) {
+			Close();
+			return false;
+		}
+
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+			return false;
+		}
+
+		return true;
+	}
+
+#ifdef UNICODE
+	bool Client::Pause(wchar_t const* szPromt) {
+		return PauseW(szPromt);
+	}
+#else
+	bool Client::Pause(char const* szPromt) {
+		return PauseA(szPromt);
+	}
+#endif
+
 	bool Client::GetBufferInfo(PCONSOLE_SCREEN_BUFFER_INFOEX const pBufferInfoEx) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_GETBUFFERINFO);
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_GETBUFFERINFO);
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
-		pMessage->ReadData(pBufferInfoEx, sizeof(CONSOLE_SCREEN_BUFFER_INFOEX));
+		MessagePtr->ReadData(pBufferInfoEx, sizeof(CONSOLE_SCREEN_BUFFER_INFOEX));
 
 		return true;
 	}
 
 	bool Client::SetBufferInfo(CONSOLE_SCREEN_BUFFER_INFOEX& BufferInfoEx) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETBUFFERINFO);
-		pMessage->WriteData(&BufferInfoEx, sizeof(CONSOLE_SCREEN_BUFFER_INFOEX));
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETBUFFERINFO);
+		MessagePtr->WriteData(&BufferInfoEx, sizeof(CONSOLE_SCREEN_BUFFER_INFOEX));
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
@@ -2029,24 +2105,23 @@ namespace Terminal {
 
 	bool Client::SetAttributes(const WORD& unAttributes) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETATTRIBUTES);
-		pMessage->WriteData(const_cast<PWORD>(&unAttributes), sizeof(WORD));
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETATTRIBUTES);
+		MessagePtr->WriteData(const_cast<PWORD>(&unAttributes), sizeof(WORD));
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
@@ -2097,11 +2172,10 @@ namespace Terminal {
 
 	bool Client::Flush(const bool bClearAll, const bool bUpdateOriginalColorPair, const bool bResetPreviousColorPair) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_FLUSH);
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_FLUSH);
 
 		struct _FLUSH {
 			bool m_bClearAll;
@@ -2115,19 +2189,19 @@ namespace Terminal {
 		Data.m_bUpdateOriginalColorPair = bUpdateOriginalColorPair;
 		Data.m_bResetPreviousColorPair = bResetPreviousColorPair;
 
-		pMessage->WriteData(&Data, sizeof(Data));
+		MessagePtr->WriteData(&Data, sizeof(Data));
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
@@ -2151,24 +2225,23 @@ namespace Terminal {
 
 	bool Client::SetColor(const COLOR_PAIR& ColorPair) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETCOLOR);
-		pMessage->WriteData(const_cast<PCOLOR_PAIR>(&ColorPair), sizeof(COLOR_PAIR));
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETCOLOR);
+		MessagePtr->WriteData(const_cast<PCOLOR_PAIR>(&ColorPair), sizeof(COLOR_PAIR));
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
@@ -2177,24 +2250,23 @@ namespace Terminal {
 
 	bool Client::RestoreColor(const bool bRestorePrevious) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_RESTORECOLOR);
-		pMessage->WriteData(const_cast<bool*>(&bRestorePrevious), sizeof(bool));
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_RESTORECOLOR);
+		MessagePtr->WriteData(const_cast<bool*>(&bRestorePrevious), sizeof(bool));
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
@@ -2207,24 +2279,23 @@ namespace Terminal {
 
 	bool Client::SetCursorColor(const COLOR_PAIR& ColorPair) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORCOLOR);
-		pMessage->WriteData(const_cast<PCOLOR_PAIR>(&ColorPair), sizeof(COLOR_PAIR));
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORCOLOR);
+		MessagePtr->WriteData(const_cast<PCOLOR_PAIR>(&ColorPair), sizeof(COLOR_PAIR));
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
@@ -2233,24 +2304,23 @@ namespace Terminal {
 
 	bool Client::RestoreCursorColor(const bool bRestorePrevious) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_RESTORECURSORCOLOR);
-		pMessage->WriteData(const_cast<bool*>(&bRestorePrevious), sizeof(bool));
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_RESTORECURSORCOLOR);
+		MessagePtr->WriteData(const_cast<bool*>(&bRestorePrevious), sizeof(bool));
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
@@ -2263,51 +2333,49 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_GETCURSORINFO);
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_GETCURSORINFO);
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
-		pMessage->ReadData(pCursorInfo, min(TERMINAL_MESSAGE_DATA_SIZE, sizeof(CONSOLE_CURSOR_INFO)));
+		MessagePtr->ReadData(pCursorInfo, min(TERMINAL_MESSAGE_DATA_SIZE, sizeof(CONSOLE_CURSOR_INFO)));
 
 		return true;
 	}
 
 	bool Client::SetCursorInfo(const CONSOLE_CURSOR_INFO& CursorInfo) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORINFO);
-		pMessage->WriteData(const_cast<PCONSOLE_CURSOR_INFO>(&CursorInfo), sizeof(CONSOLE_CURSOR_INFO));
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORINFO);
+		MessagePtr->WriteData(const_cast<PCONSOLE_CURSOR_INFO>(&CursorInfo), sizeof(CONSOLE_CURSOR_INFO));
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
@@ -2377,24 +2445,23 @@ namespace Terminal {
 
 	bool Client::SetCursorPosition(const COORD& CursorPosition) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORPOSITION);
-		pMessage->WriteData(const_cast<PCOORD>(&CursorPosition), sizeof(COORD));
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORPOSITION);
+		MessagePtr->WriteData(const_cast<PCOORD>(&CursorPosition), sizeof(COORD));
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
@@ -2403,11 +2470,10 @@ namespace Terminal {
 
 	bool Client::Erase(const COORD& CursorPosition, const unsigned int unLength) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
-		auto pMessage = MessagePtr.get();
 
-		memset(pMessage, 0, sizeof(TerminalMessage));
+		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
-		pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORPOSITION);
+		MessagePtr->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORPOSITION);
 
 		struct _ERASE {
 			COORD m_CursorPosition;
@@ -2419,19 +2485,19 @@ namespace Terminal {
 		Data.m_CursorPosition = CursorPosition;
 		Data.m_unLength = unLength;
 
-		pMessage->WriteData(&Data, sizeof(Data));
+		MessagePtr->WriteData(&Data, sizeof(Data));
 
-		if (!Send(pMessage)) {
+		if (!Send(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (!Receive(pMessage)) {
+		if (!Receive(MessagePtr)) {
 			Close();
 			return false;
 		}
 
-		if (pMessage->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
+		if (MessagePtr->GetAction() != TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS) {
 			return false;
 		}
 
@@ -2449,7 +2515,7 @@ namespace Terminal {
 			return -1;
 		}
 
-		if (SetCursorColor(ColorPair)) {
+		if (!SetCursorColor(ColorPair)) {
 			HeapFree(hHeap, NULL, pBuffer);
 			return -1;
 		}
