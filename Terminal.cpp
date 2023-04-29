@@ -3,6 +3,7 @@
 // C
 #include <io.h>
 #include <fcntl.h>
+#include <conio.h>
 
 // C++
 #include <clocale>
@@ -417,6 +418,52 @@ namespace Terminal {
 #else
 	bool Screen::Write(char const* const szBuffer) {
 		return WriteA(szBuffer);
+	}
+#endif
+
+	bool Screen::PauseA(char const* szPromt) {
+		if (!szPromt) {
+			szPromt = "Press any key to continue...";
+		}
+
+		if (!m_pWindow) {
+			return false;
+		}
+
+		if (!WriteA(szPromt)) {
+			return false;
+		}
+
+		_CRT_UNUSED(_getch());
+
+		return true;
+	}
+
+	bool Screen::PauseW(wchar_t const* szPromt) {
+		if (!szPromt) {
+			szPromt = L"Press any key to continue...";
+		}
+
+		if (!m_pWindow) {
+			return false;
+		}
+
+		if (!WriteW(szPromt)) {
+			return false;
+		}
+
+		_CRT_UNUSED(_getch());
+
+		return true;
+	}
+
+#ifdef UNICODE
+	bool Screen::Pause(wchar_t const* szPromt) {
+		return PauseW(szPromt);
+	}
+#else
+	bool Screen::Pause(char const* szPromt) {
+		return PauseA(szPromt);
 	}
 #endif
 
@@ -1447,182 +1494,182 @@ namespace Terminal {
 		}
 
 		switch (pMessage->GetAction()) {
-			case TERMINAL_MESSAGE_ACTION::ACTION_READA: {
-				if (m_pScreen->ReadA(reinterpret_cast<char*>(pMessage->GetData()), TERMINAL_BUFFER_SIZE)) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_READA: {
+			if (m_pScreen->ReadA(reinterpret_cast<char*>(pMessage->GetData()), TERMINAL_BUFFER_SIZE)) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_READW: {
-				if (m_pScreen->ReadW(reinterpret_cast<wchar_t*>(pMessage->GetData()), TERMINAL_BUFFER_SIZE)) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_READW: {
+			if (m_pScreen->ReadW(reinterpret_cast<wchar_t*>(pMessage->GetData()), TERMINAL_BUFFER_SIZE)) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_WRITEA: {
-				if (m_pScreen->WriteA(reinterpret_cast<char*>(pMessage->GetData()))) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_WRITEA: {
+			if (m_pScreen->WriteA(reinterpret_cast<char*>(pMessage->GetData()))) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_WRITEW: {
-				if (m_pScreen->WriteW(reinterpret_cast<wchar_t*>(pMessage->GetData()))) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_WRITEW: {
+			if (m_pScreen->WriteW(reinterpret_cast<wchar_t*>(pMessage->GetData()))) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_GETBUFFERINFO: {
-				if (m_pScreen->GetBufferInfo(reinterpret_cast<PCONSOLE_SCREEN_BUFFER_INFOEX>(pMessage->GetData()))) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_GETBUFFERINFO: {
+			if (m_pScreen->GetBufferInfo(reinterpret_cast<PCONSOLE_SCREEN_BUFFER_INFOEX>(pMessage->GetData()))) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_SETBUFFERINFO: {
-				if (m_pScreen->SetBufferInfo(*reinterpret_cast<PCONSOLE_SCREEN_BUFFER_INFOEX>(pMessage->GetData()))) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_SETBUFFERINFO: {
+			if (m_pScreen->SetBufferInfo(*reinterpret_cast<PCONSOLE_SCREEN_BUFFER_INFOEX>(pMessage->GetData()))) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_SETATTRIBUTES: {
-				if (m_pScreen->SetAttributes(*reinterpret_cast<PWORD>(pMessage->GetData()))) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_SETATTRIBUTES: {
+			if (m_pScreen->SetAttributes(*reinterpret_cast<PWORD>(pMessage->GetData()))) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_FLUSH: {
-				struct _FLUSH {
-					bool m_bClearAll;
-					bool m_bUpdateOriginalColorPair;
-					bool m_bResetPreviousColorPair;
-				} Data = *reinterpret_cast<_FLUSH*>(pMessage->GetData());
+		case TERMINAL_MESSAGE_ACTION::ACTION_FLUSH: {
+			struct _FLUSH {
+				bool m_bClearAll;
+				bool m_bUpdateOriginalColorPair;
+				bool m_bResetPreviousColorPair;
+			} Data = *reinterpret_cast<_FLUSH*>(pMessage->GetData());
 
-				if (m_pScreen->Flush(Data.m_bClearAll, Data.m_bUpdateOriginalColorPair, Data.m_bResetPreviousColorPair)) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+			if (m_pScreen->Flush(Data.m_bClearAll, Data.m_bUpdateOriginalColorPair, Data.m_bResetPreviousColorPair)) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-
-				break;
 			}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_SETCOLOR: {
-				if (m_pScreen->SetColor(*reinterpret_cast<PCOLOR_PAIR>(pMessage->GetData()))) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+			break;
+		}
+
+		case TERMINAL_MESSAGE_ACTION::ACTION_SETCOLOR: {
+			if (m_pScreen->SetColor(*reinterpret_cast<PCOLOR_PAIR>(pMessage->GetData()))) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_RESTORECOLOR: {
-				if (m_pScreen->RestoreColor(*reinterpret_cast<bool*>(pMessage->GetData()))) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_RESTORECOLOR: {
+			if (m_pScreen->RestoreColor(*reinterpret_cast<bool*>(pMessage->GetData()))) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORCOLOR: {
-				if (m_pScreen->SetCursorColor(*reinterpret_cast<PCOLOR_PAIR>(pMessage->GetData()))) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORCOLOR: {
+			if (m_pScreen->SetCursorColor(*reinterpret_cast<PCOLOR_PAIR>(pMessage->GetData()))) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_RESTORECURSORCOLOR: {
-				if (m_pScreen->RestoreCursorColor(*reinterpret_cast<bool*>(pMessage->GetData()))) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_RESTORECURSORCOLOR: {
+			if (m_pScreen->RestoreCursorColor(*reinterpret_cast<bool*>(pMessage->GetData()))) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_GETCURSORINFO: {
-				if (m_pScreen->GetCursorInfo(reinterpret_cast<PCONSOLE_CURSOR_INFO>(pMessage->GetData()))) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_GETCURSORINFO: {
+			if (m_pScreen->GetCursorInfo(reinterpret_cast<PCONSOLE_CURSOR_INFO>(pMessage->GetData()))) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORINFO: {
-				if (m_pScreen->SetCursorInfo(*reinterpret_cast<PCONSOLE_CURSOR_INFO>(pMessage->GetData()))) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORINFO: {
+			if (m_pScreen->SetCursorInfo(*reinterpret_cast<PCONSOLE_CURSOR_INFO>(pMessage->GetData()))) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORPOSITION: {
-				if (m_pScreen->SetCursorPosition(*reinterpret_cast<PCOORD>(pMessage->GetData()))) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+		case TERMINAL_MESSAGE_ACTION::ACTION_SETCURSORPOSITION: {
+			if (m_pScreen->SetCursorPosition(*reinterpret_cast<PCOORD>(pMessage->GetData()))) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-				break;
 			}
+			break;
+		}
 
-			case TERMINAL_MESSAGE_ACTION::ACTION_ERASE: {
-				struct _ERASE {
-					COORD m_CursorPosition;
-					unsigned int m_unLength;
-				} Data = *reinterpret_cast<_ERASE*>(pMessage->GetData());
+		case TERMINAL_MESSAGE_ACTION::ACTION_ERASE: {
+			struct _ERASE {
+				COORD m_CursorPosition;
+				unsigned int m_unLength;
+			} Data = *reinterpret_cast<_ERASE*>(pMessage->GetData());
 
-				if (m_pScreen->Erase(Data.m_CursorPosition, Data.m_unLength)) {
-					pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
-					if (Send(pMessage)) {
-						return true;
-					}
+			if (m_pScreen->Erase(Data.m_CursorPosition, Data.m_unLength)) {
+				pMessage->SetAction(TERMINAL_MESSAGE_ACTION::ACTION_SUCCESS);
+				if (Send(pMessage)) {
+					return true;
 				}
-
-				break;
 			}
 
-			default: {
-				break;
-			}
+			break;
+		}
+
+		default: {
+			break;
+		}
 		}
 
 		return false;

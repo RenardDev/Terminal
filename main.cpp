@@ -93,8 +93,7 @@ int _tmain(int nArguments, PTCHAR* pArguments) {
 		} else {
 			Console.tprintf({ COLOR::COLOR_CYAN, COLOR::COLOR_BLUE }, _T("Hello, World!\n"));
 
-			int a = 0;
-			Console.tscanf(COLOR::COLOR_YELLOW, _T("%i"), &a);
+			Screen.Pause();
 		}
 	}
 

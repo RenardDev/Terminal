@@ -137,6 +137,15 @@ namespace Terminal {
 #endif
 
 	public:
+		bool PauseA(char const* szPromt = nullptr);
+		bool PauseW(wchar_t const* szPromt = nullptr);
+#ifdef UNICODE
+		bool Pause(wchar_t const* szPromt = nullptr);
+#else
+		bool Pause(char const* szPromt = nullptr);
+#endif
+
+	public:
 		bool GetBufferInfo(PCONSOLE_SCREEN_BUFFER_INFOEX const pBufferInfoEx);
 		bool SetBufferInfo(CONSOLE_SCREEN_BUFFER_INFOEX& BufferInfoEx);
 
