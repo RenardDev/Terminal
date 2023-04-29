@@ -16,7 +16,7 @@ int _tmain(int nArguments, PTCHAR* pArguments) {
 
 	Terminal::Window Window;
 	if (Window.Open(true)) {
-		Terminal::Screen Screen(&Window, true);
+		Terminal::Screen Screen(&Window);
 		Terminal::Console Console(&Screen);
 
 		if (nArguments > 1) {
@@ -54,6 +54,8 @@ int _tmain(int nArguments, PTCHAR* pArguments) {
 						}
 					}
 
+					Console.tprintf(COLOR::COLOR_RED, _T("\n"));
+
 					Server.Close();
 
 					Console.tprintf(COLOR::COLOR_RED, _T("DISCONNECTED!\n"));
@@ -81,11 +83,11 @@ int _tmain(int nArguments, PTCHAR* pArguments) {
 
 					int nA = 0;
 					Client.tscanf(COLOR::COLOR_YELLOW, _T("%i"), &nA);
-					Console.tprintf(COLOR::COLOR_GREEN, _T("nA = %i\n"), nA);
+					Console.tprintf(COLOR::COLOR_DARK_MAGENTA, _T("nA = %i\n"), nA);
 
 					Client.Pause();
 
-					if (Client.Close()) {
+					if (!Client.Close()) {
 						return -1;
 					}
 
