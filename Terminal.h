@@ -126,14 +126,14 @@ namespace Terminal {
 	public:
 		bool ReadA(char* const szBuffer, const unsigned int unLength);
 		bool ReadW(wchar_t* const szBuffer, const unsigned int unLength);
-#ifdef UNICODE
+#ifdef _UNICODE
 		bool Read(wchar_t* const szBuffer, const unsigned int unLength);
 #else
 		bool Read(char* const szBuffer, const unsigned int unLength);
 #endif
 		bool WriteA(char const* const szBuffer);
 		bool WriteW(wchar_t const* const szBuffer);
-#ifdef UNICODE
+#ifdef _UNICODE
 		bool Write(wchar_t const* const szBuffer);
 #else
 		bool Write(char const* const szBuffer);
@@ -142,7 +142,7 @@ namespace Terminal {
 	public:
 		bool PauseA(char const* szPromt = nullptr);
 		bool PauseW(wchar_t const* szPromt = nullptr);
-#ifdef UNICODE
+#ifdef _UNICODE
 		bool Pause(wchar_t const* szPromt = nullptr);
 #else
 		bool Pause(char const* szPromt = nullptr);
@@ -221,7 +221,7 @@ namespace Terminal {
 		int wprintf(const COLOR& unForegroundColor, wchar_t const* const _Format, ...);
 
 	public:
-#ifdef UNICODE
+#ifdef _UNICODE
 		int tvprintf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, const va_list& vargs);
 		int tvprintf(const COLOR& unForegroundColor, wchar_t const* const _Format, const va_list& vargs);
 		int tprintf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, ...);
@@ -246,7 +246,7 @@ namespace Terminal {
 		int wscanf(const COLOR& unForegroundColor, wchar_t const* const _Format, ...);
 
 	public:
-#ifdef UNICODE
+#ifdef _UNICODE
 		int tvscanf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, const va_list& vargs);
 		int tvscanf(const COLOR& unForegroundColor, wchar_t const* const _Format, const va_list& vargs);
 		int tscanf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, ...);
@@ -363,14 +363,14 @@ namespace Terminal {
 	public:
 		bool ReadA(char* const szBuffer, const unsigned int unLength);
 		bool ReadW(wchar_t* const szBuffer, const unsigned int unLength);
-#ifdef UNICODE
+#ifdef _UNICODE
 		bool Read(wchar_t* const szBuffer, const unsigned int unLength);
 #else
 		bool Read(char* const szBuffer, const unsigned int unLength);
 #endif
 		bool WriteA(char const* const szBuffer);
 		bool WriteW(wchar_t const* const szBuffer);
-#ifdef UNICODE
+#ifdef _UNICODE
 		bool Write(wchar_t const* const szBuffer);
 #else
 		bool Write(char const* const szBuffer);
@@ -379,7 +379,7 @@ namespace Terminal {
 	public:
 		bool PauseA(char const* szPromt = nullptr);
 		bool PauseW(wchar_t const* szPromt = nullptr);
-#ifdef UNICODE
+#ifdef _UNICODE
 		bool Pause(wchar_t const* szPromt = nullptr);
 #else
 		bool Pause(char const* szPromt = nullptr);
@@ -437,7 +437,7 @@ namespace Terminal {
 		int wprintf(const COLOR& unForegroundColor, wchar_t const* const _Format, ...);
 
 	public:
-#ifdef UNICODE
+#ifdef _UNICODE
 		int tvprintf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, const va_list& vargs);
 		int tvprintf(const COLOR& unForegroundColor, wchar_t const* const _Format, const va_list& vargs);
 		int tprintf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, ...);
@@ -462,7 +462,7 @@ namespace Terminal {
 		int wscanf(const COLOR& unForegroundColor, wchar_t const* const _Format, ...);
 
 	public:
-#ifdef UNICODE
+#ifdef _UNICODE
 		int tvscanf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, const va_list& vargs);
 		int tvscanf(const COLOR& unForegroundColor, wchar_t const* const _Format, const va_list& vargs);
 		int tscanf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, ...);

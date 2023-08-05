@@ -366,7 +366,7 @@ namespace Terminal {
 		return true;
 	}
 
-#ifdef UNICODE
+#ifdef _UNICODE
 	bool Screen::Read(wchar_t* const szBuffer, const unsigned int unLength) {
 		return ReadW(szBuffer, unLength);
 	}
@@ -408,7 +408,7 @@ namespace Terminal {
 		return true;
 	}
 
-#ifdef UNICODE
+#ifdef _UNICODE
 	bool Screen::Write(wchar_t const* const szBuffer) {
 		return WriteW(szBuffer);
 	}
@@ -454,7 +454,7 @@ namespace Terminal {
 		return true;
 	}
 
-#ifdef UNICODE
+#ifdef _UNICODE
 	bool Screen::Pause(wchar_t const* szPromt) {
 		return PauseW(szPromt);
 	}
@@ -630,7 +630,7 @@ namespace Terminal {
 			CHAR_INFO Fill;
 			memset(&Fill, 0, sizeof(Fill));
 
-#ifdef UNICODE
+#ifdef _UNICODE
 			Fill.Char.UnicodeChar = L' ';
 #else
 			Fill.Char.AsciiChar = ' ';
@@ -1094,7 +1094,7 @@ namespace Terminal {
 		return nLength;
 	}
 
-#ifdef UNICODE
+#ifdef _UNICODE
 	int Console::tvprintf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, const va_list& vargs) {
 		return vwprintf(ColorPair, _Format, vargs);
 	}
@@ -1266,7 +1266,7 @@ namespace Terminal {
 		return nLength;
 	}
 
-#ifdef UNICODE
+#ifdef _UNICODE
 	int Console::tvscanf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, const va_list& vargs) {
 		return vwscanf(ColorPair, _Format, vargs);
 	}
@@ -1887,7 +1887,7 @@ namespace Terminal {
 		return true;
 	}
 
-#ifdef UNICODE
+#ifdef _UNICODE
 	bool Client::Read(wchar_t* const szBuffer, const unsigned int unLength) {
 		return ReadW(szBuffer, unLength);
 	}
@@ -1959,7 +1959,7 @@ namespace Terminal {
 		return true;
 	}
 
-#ifdef UNICODE
+#ifdef _UNICODE
 	bool Client::Write(wchar_t const* const szBuffer) {
 		return WriteW(szBuffer);
 	}
@@ -2031,7 +2031,7 @@ namespace Terminal {
 		return true;
 	}
 
-#ifdef UNICODE
+#ifdef _UNICODE
 	bool Client::Pause(wchar_t const* szPromt) {
 		return PauseW(szPromt);
 	}
@@ -2624,7 +2624,7 @@ namespace Terminal {
 		return nLength;
 	}
 
-#ifdef UNICODE
+#ifdef _UNICODE
 	int Client::tvprintf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, const va_list& vargs) {
 		return vwprintf(ColorPair, _Format, vargs);
 	}
@@ -2788,7 +2788,7 @@ namespace Terminal {
 		return nLength;
 	}
 
-#ifdef UNICODE
+#ifdef _UNICODE
 	int Client::tvscanf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, const va_list& vargs) {
 		return vwscanf(ColorPair, _Format, vargs);
 	}
