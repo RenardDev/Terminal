@@ -60,7 +60,7 @@ namespace Terminal {
 		bool Hide();
 
 	public:
-		HWND GetWindow();
+		HWND GetWindow() const;
 		bool GetNativeIO(PWINDOW_NATIVE_IO const pNativeIO);
 		bool GetIO(PWINDOW_IO const pIO);
 
@@ -188,7 +188,7 @@ namespace Terminal {
 		bool Erase(const COORD& CursorPosition, const unsigned int unLength);
 
 	public:
-		Window* const GetWindow();
+		Window* const GetWindow() const;
 
 	private:
 		const bool m_bAutoRestore;
@@ -259,7 +259,7 @@ namespace Terminal {
 #endif
 
 	public:
-		Screen* const GetScreen();
+		Screen* const GetScreen() const;
 
 	private:
 		Screen* const m_pScreen;
@@ -302,9 +302,10 @@ namespace Terminal {
 		~TerminalMessage() = default;
 
 	public:
-		TERMINAL_MESSAGE_ACTION GetAction();
+		TERMINAL_MESSAGE_ACTION GetAction() const;
 		void SetAction(TERMINAL_MESSAGE_ACTION unAction);
 
+	public:
 		unsigned char* GetData();
 
 	public:
@@ -333,11 +334,11 @@ namespace Terminal {
 		bool Process(const std::unique_ptr<TerminalMessage>& ptrMessage);
 
 	public:
-		Screen* const GetScreen();
+		Screen* const GetScreen() const;
 
 	public:
 		bool GetSessionName(TCHAR szSessionName[64]);
-		const HANDLE GetPipe();
+		const HANDLE GetPipe() const;
 
 	private:
 		Screen* const m_pScreen;
@@ -476,7 +477,7 @@ namespace Terminal {
 
 	public:
 		bool GetSessionName(TCHAR szSessionName[64]);
-		const HANDLE GetPipe();
+		const HANDLE GetPipe() const;
 
 	private:
 		TCHAR m_szSessionName[64];

@@ -103,7 +103,7 @@ namespace Terminal {
 			}
 		}
 
-		const HANDLE hIN = GetStdHandle(STD_INPUT_HANDLE);
+		const auto& hIN = GetStdHandle(STD_INPUT_HANDLE);
 		if (!hIN || (hIN == INVALID_HANDLE_VALUE)) {
 			return false;
 		}
@@ -116,7 +116,7 @@ namespace Terminal {
 				return false;
 			}
 
-			FILE* pIN = _tfdopen(nInDescriptor, _T("r"));
+			const auto& pIN = _tfdopen(nInDescriptor, _T("r"));
 			if (!pIN) {
 				return false;
 			}
@@ -132,7 +132,7 @@ namespace Terminal {
 			}
 		}
 
-		const HANDLE hOUT = GetStdHandle(STD_OUTPUT_HANDLE);
+		const auto& hOUT = GetStdHandle(STD_OUTPUT_HANDLE);
 		if (!hOUT || (hOUT == INVALID_HANDLE_VALUE)) {
 			return false;
 		}
@@ -145,7 +145,7 @@ namespace Terminal {
 				return false;
 			}
 
-			FILE* pOUT = _tfdopen(nOutDescriptor, _T("w"));
+			const auto& pOUT = _tfdopen(nOutDescriptor, _T("w"));
 			if (!pOUT) {
 				return false;
 			}
@@ -262,7 +262,7 @@ namespace Terminal {
 		return true;
 	}
 
-	HWND Window::GetWindow() {
+	HWND Window::GetWindow() const {
 		return m_hWindow;
 	}
 
@@ -431,7 +431,15 @@ namespace Terminal {
 			return false;
 		}
 
+		if (!HideCursor()) {
+			return false;
+		}
+
 		_CRT_UNUSED(_getch());
+
+		if (!ShowCursor()) {
+			return false;
+		}
 
 		return true;
 	}
@@ -449,7 +457,15 @@ namespace Terminal {
 			return false;
 		}
 
+		if (!HideCursor()) {
+			return false;
+		}
+
 		_CRT_UNUSED(_getch());
+
+		if (!ShowCursor()) {
+			return false;
+		}
 
 		return true;
 	}
@@ -954,7 +970,7 @@ namespace Terminal {
 		return true;
 	}
 
-	Window* const Screen::GetWindow() {
+	Window* const Screen::GetWindow() const {
 		return m_pWindow;
 	}
 
@@ -971,12 +987,12 @@ namespace Terminal {
 			return -1;
 		}
 
-		const HANDLE hHeap = GetProcessHeap();
+		const auto& hHeap = GetProcessHeap();
 		if (!hHeap) {
 			return -1;
 		}
 
-		char* pBuffer = reinterpret_cast<char*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(char) * TERMINAL_BUFFER_SIZE));
+		const auto& pBuffer = reinterpret_cast<char*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(char) * TERMINAL_BUFFER_SIZE));
 		if (!pBuffer) {
 			return -1;
 		}
@@ -1035,12 +1051,12 @@ namespace Terminal {
 			return -1;
 		}
 
-		const HANDLE hHeap = GetProcessHeap();
+		const auto& hHeap = GetProcessHeap();
 		if (!hHeap) {
 			return -1;
 		}
 
-		wchar_t* pBuffer = reinterpret_cast<wchar_t*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(wchar_t) * TERMINAL_BUFFER_SIZE));
+		const auto& pBuffer = reinterpret_cast<wchar_t*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(wchar_t) * TERMINAL_BUFFER_SIZE));
 		if (!pBuffer) {
 			return -1;
 		}
@@ -1149,12 +1165,12 @@ namespace Terminal {
 			return -1;
 		}
 
-		const HANDLE hHeap = GetProcessHeap();
+		const auto& hHeap = GetProcessHeap();
 		if (!hHeap) {
 			return -1;
 		}
 
-		char* pBuffer = reinterpret_cast<char*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(char) * TERMINAL_BUFFER_SIZE));
+		const auto& pBuffer = reinterpret_cast<char*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(char) * TERMINAL_BUFFER_SIZE));
 		if (!pBuffer) {
 			return -1;
 		}
@@ -1210,12 +1226,12 @@ namespace Terminal {
 			return -1;
 		}
 
-		const HANDLE hHeap = GetProcessHeap();
+		const auto& hHeap = GetProcessHeap();
 		if (!hHeap) {
 			return -1;
 		}
 
-		wchar_t* pBuffer = reinterpret_cast<wchar_t*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(wchar_t) * TERMINAL_BUFFER_SIZE));
+		const auto& pBuffer = reinterpret_cast<wchar_t*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(wchar_t) * TERMINAL_BUFFER_SIZE));
 		if (!pBuffer) {
 			return -1;
 		}
@@ -1316,7 +1332,7 @@ namespace Terminal {
 	}
 #endif
 
-	Screen* const Console::GetScreen() {
+	Screen* const Console::GetScreen() const {
 		return m_pScreen;
 	}
 
@@ -1329,7 +1345,7 @@ namespace Terminal {
 		memset(m_pData, 0, sizeof(m_pData));
 	}
 
-	TERMINAL_MESSAGE_ACTION TerminalMessage::GetAction() {
+	TERMINAL_MESSAGE_ACTION TerminalMessage::GetAction() const {
 		return m_unAction;
 	}
 
@@ -1383,6 +1399,9 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -1412,6 +1431,9 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -1687,7 +1709,7 @@ namespace Terminal {
 		return false;
 	}
 
-	Screen* const Server::GetScreen() {
+	Screen* const Server::GetScreen() const {
 		return m_pScreen;
 	}
 
@@ -1696,7 +1718,7 @@ namespace Terminal {
 		return true;
 	}
 
-	const HANDLE Server::GetPipe() {
+	const HANDLE Server::GetPipe() const {
 		return m_hPipe;
 	}
 
@@ -1728,6 +1750,9 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -1757,6 +1782,9 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -1829,6 +1857,9 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -1863,6 +1894,9 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -1903,6 +1937,9 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -1934,6 +1971,9 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -1975,6 +2015,9 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2006,6 +2049,9 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2042,7 +2088,14 @@ namespace Terminal {
 #endif
 
 	bool Client::GetBufferInfo(PCONSOLE_SCREEN_BUFFER_INFOEX const pBufferInfoEx) {
+		if (!pBufferInfoEx) {
+			return false;
+		}
+
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2069,6 +2122,9 @@ namespace Terminal {
 
 	bool Client::SetBufferInfo(CONSOLE_SCREEN_BUFFER_INFOEX& BufferInfoEx) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2093,6 +2149,10 @@ namespace Terminal {
 	}
 
 	bool Client::GetAttributes(PWORD const pAttributes) {
+		if (!pAttributes) {
+			return false;
+		}
+
 		CONSOLE_SCREEN_BUFFER_INFOEX csbi;
 		if (!GetBufferInfo(&csbi)) {
 			return false;
@@ -2105,6 +2165,9 @@ namespace Terminal {
 
 	bool Client::SetAttributes(const WORD& unAttributes) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2172,6 +2235,9 @@ namespace Terminal {
 
 	bool Client::Flush(const bool bClearAll, const bool bUpdateOriginalColorPair, const bool bResetPreviousColorPair) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2225,6 +2291,9 @@ namespace Terminal {
 
 	bool Client::SetColor(const COLOR_PAIR& ColorPair) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2250,6 +2319,9 @@ namespace Terminal {
 
 	bool Client::RestoreColor(const bool bRestorePrevious) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2279,6 +2351,9 @@ namespace Terminal {
 
 	bool Client::SetCursorColor(const COLOR_PAIR& ColorPair) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2304,6 +2379,9 @@ namespace Terminal {
 
 	bool Client::RestoreCursorColor(const bool bRestorePrevious) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2333,6 +2411,9 @@ namespace Terminal {
 		}
 
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2359,6 +2440,9 @@ namespace Terminal {
 
 	bool Client::SetCursorInfo(const CONSOLE_CURSOR_INFO& CursorInfo) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2445,6 +2529,9 @@ namespace Terminal {
 
 	bool Client::SetCursorPosition(const COORD& CursorPosition) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2470,6 +2557,9 @@ namespace Terminal {
 
 	bool Client::Erase(const COORD& CursorPosition, const unsigned int unLength) {
 		auto MessagePtr = std::make_unique<TerminalMessage>();
+		if (!MessagePtr) {
+			return false;
+		}
 
 		memset(MessagePtr.get(), 0, sizeof(TerminalMessage));
 
@@ -2505,12 +2595,12 @@ namespace Terminal {
 	}
 
 	int Client::vprintf(const COLOR_PAIR& ColorPair, char const* const _Format, const va_list& vargs) {
-		const HANDLE hHeap = GetProcessHeap();
+		const auto& hHeap = GetProcessHeap();
 		if (!hHeap) {
 			return -1;
 		}
 
-		char* pBuffer = reinterpret_cast<char*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(char) * TERMINAL_BUFFER_SIZE));
+		const auto& pBuffer = reinterpret_cast<char*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(char) * TERMINAL_BUFFER_SIZE));
 		if (!pBuffer) {
 			return -1;
 		}
@@ -2565,12 +2655,12 @@ namespace Terminal {
 	}
 
 	int Client::vwprintf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, const va_list& vargs) {
-		const HANDLE hHeap = GetProcessHeap();
+		const auto& hHeap = GetProcessHeap();
 		if (!hHeap) {
 			return -1;
 		}
 
-		wchar_t* pBuffer = reinterpret_cast<wchar_t*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(wchar_t) * TERMINAL_BUFFER_SIZE));
+		const auto& pBuffer = reinterpret_cast<wchar_t*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(wchar_t) * TERMINAL_BUFFER_SIZE));
 		if (!pBuffer) {
 			return -1;
 		}
@@ -2675,12 +2765,12 @@ namespace Terminal {
 #endif
 
 	int Client::vscanf(const COLOR_PAIR& ColorPair, char const* const _Format, const va_list& vargs) {
-		const HANDLE hHeap = GetProcessHeap();
+		const auto& hHeap = GetProcessHeap();
 		if (!hHeap) {
 			return -1;
 		}
 
-		char* pBuffer = reinterpret_cast<char*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(char) * TERMINAL_BUFFER_SIZE));
+		const auto& pBuffer = reinterpret_cast<char*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(char) * TERMINAL_BUFFER_SIZE));
 		if (!pBuffer) {
 			return -1;
 		}
@@ -2732,12 +2822,12 @@ namespace Terminal {
 	}
 
 	int Client::vwscanf(const COLOR_PAIR& ColorPair, wchar_t const* const _Format, const va_list& vargs) {
-		const HANDLE hHeap = GetProcessHeap();
+		const auto& hHeap = GetProcessHeap();
 		if (!hHeap) {
 			return -1;
 		}
 
-		wchar_t* pBuffer = reinterpret_cast<wchar_t*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(wchar_t) * TERMINAL_BUFFER_SIZE));
+		const auto& pBuffer = reinterpret_cast<wchar_t*>(HeapAlloc(hHeap, HEAP_ZERO_MEMORY, sizeof(wchar_t) * TERMINAL_BUFFER_SIZE));
 		if (!pBuffer) {
 			return -1;
 		}
@@ -2848,7 +2938,7 @@ namespace Terminal {
 		return true;
 	}
 
-	const HANDLE Client::GetPipe() {
+	const HANDLE Client::GetPipe() const {
 		return m_hPipe;
 	}
 }
