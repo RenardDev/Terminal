@@ -16,7 +16,7 @@ int _tmain(int nArguments, PTCHAR* pArguments) {
 
 	Terminal::Window Window;
 	if (Window.Open(true)) {
-		Terminal::Screen Screen(&Window);
+		Terminal::Screen Screen(&Window, true);
 		Terminal::Console Console(&Screen);
 
 		if (nArguments > 1) {
@@ -38,21 +38,7 @@ int _tmain(int nArguments, PTCHAR* pArguments) {
 
 					Console.tprintf(COLOR::COLOR_GREEN, _T("CONNECTED!\n"));
 
-					auto MessagePtr = std::make_unique<Terminal::TerminalMessage>();
-
-					while (MessagePtr->GetAction() != Terminal::TERMINAL_MESSAGE_ACTION::ACTION_CLOSE) {
-						memset(MessagePtr.get(), 0, sizeof(Terminal::TerminalMessage));
-
-						if (!Server.Receive(MessagePtr)) {
-							Console.tprintf(COLOR::COLOR_RED, _T("RECEIVE ERROR!\n"));
-							break;
-						}
-
-						if (!Server.Process(MessagePtr)) {
-							Console.tprintf(COLOR::COLOR_RED, _T("PROCESS ERROR!\n"));
-							break;
-						}
-					}
+					Server.Launch();
 
 					Console.tprintf(COLOR::COLOR_RED, _T("\n"));
 
